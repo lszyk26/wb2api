@@ -49,6 +49,40 @@ docker compose up -d --build
 
 ---
 
+## 依赖与环境
+
+**构建机**（只用 Docker 部署的话什么都不用装）
+
+| 需要 | 版本 | 用途 |
+|---|---|---|
+| Node.js | ≥ 18（推荐 22） | 只用于 `vite build` |
+| Go | ≥ 1.22 | 只用于编译后端 |
+| Docker + compose | 任意近期版本 | 一键部署只需要这个 |
+
+**第三方库**：全部锁在 `package-lock.json` / `go.sum` 里，无 CDN、无外部字体、无 cgo。
+
+- 前端 3 个直接依赖：`vue`、`vite`、`@vitejs/plugin-vue`（`npm ci` 装 32 个包，约 6 秒）
+- 后端 3 个直接依赖：`gorm.io/gorm`、`github.com/glebarez/sqlite`（纯 Go SQLite，**不需要 gcc / cgo**）、`golang.org/x/crypto`（bcrypt），其余全是标准库
+
+**运行时必须有**
+
+1. **上游账号池网关** —— 参考实现是 [ardeyouxipianyi/workbuddy2api-hub](https://github.com/ardeyouxipianyi/workbuddy2api-hub)（Python，镜像 `ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest`）。本站只做门面，**没有它站点能开但所有接口 502**。
+2. **账号**：WorkBuddy（国际版）或 CodeBuddy（国内版），你自己合法持有。
+
+**可选，不配也能正常部署**
+
+| 不配什么 | 后果 |
+|---|---|
+| `WB2_RESEND_KEY` / SMTP | 自动关闭邮箱验证码，注册直接放行 |
+| `WB2_PAY_*` | 只能走「手动转账 + 管理台确认」 |
+| `WB2_GH_ID` / `WB2_GH_SECRET` | 隐藏 GitHub 登录入口 |
+| `WB2_HUB_PANEL_PASS` | 关闭 OAuth 一键授权，只能粘贴凭据 JSON |
+| 代理池（mihomo 等） | 只影响上游出口 IP，不影响本站功能 |
+
+**不需要**：nginx（Go 自己托管前端）、Redis、MySQL、外部字体、任何 CDN。
+
+---
+
 ## 功能
 
 - **用户侧**：注册 / 邮箱验证码登录 / GitHub OAuth 一键登录、找回密码、邀请码返利、抽奖、站内演练场

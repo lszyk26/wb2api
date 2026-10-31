@@ -2,7 +2,9 @@
 
 本站是**账号池的门面**：用户体系、额度、计费、密钥、支付都在本站；真正调模型的是上游网关（`WB2_UPSTREAM`）。
 
-只要你的上游满足下面这套接口，本站就能完整工作。（参考实现：`workbuddy2api-hub`，接口风格与其一致。）
+只要你的上游满足下面这套接口，本站就能完整工作。
+
+**参考实现**：[ardeyouxipianyi/workbuddy2api-hub](https://github.com/ardeyouxipianyi/workbuddy2api-hub)（Python，镜像 `ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest`，端口 8788）。它的脚本里已经有 `/accounts/*`、`/panel/login`、`X-Realm`，直接对接即可，无需改代码。
 
 ## 鉴权
 

@@ -24,7 +24,15 @@ elif command -v docker-compose >/dev/null 2>&1; then
   DC="docker-compose"
 else
   say "→ 安装 docker compose 插件"
-  apt-get update -qq && apt-get install -y docker-compose-plugin
+  if command -v apt-get >/dev/null 2>&1; then
+    apt-get update -qq && apt-get install -y docker-compose-plugin
+  elif command -v dnf >/dev/null 2>&1; then
+    dnf install -y docker-compose-plugin
+  elif command -v yum >/dev/null 2>&1; then
+    yum install -y docker-compose-plugin
+  fi
+  docker compose version >/dev/null 2>&1 \
+    || die "没装上 docker compose 插件，手动装一下再重跑：https://docs.docker.com/compose/install/linux/"
   DC="docker compose"
 fi
 say "✓ Docker 就绪（$DC）"
