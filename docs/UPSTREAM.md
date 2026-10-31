@@ -2,6 +2,8 @@
 
 本站是**账号池的门面**：用户体系、额度、计费、密钥、支付都在本站；真正调模型的是上游网关（`WB2_UPSTREAM`）。
 
+**没有它会发生什么**：本站可以正常注册登录、开密钥、看页面，但**加不了任何账号**（授权按钮无效、粘贴的凭据没人加载），`/v1` 全部 502。账号只能经由上游进池，本站不实现登录协议。
+
 只要你的上游满足下面这套接口，本站就能完整工作。
 
 **参考实现**：[ardeyouxipianyi/workbuddy2api-hub](https://github.com/ardeyouxipianyi/workbuddy2api-hub)（Python，镜像 `ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest`，端口 8788）。它的脚本里已经有 `/accounts/*`、`/panel/login`、`X-Realm`，直接对接即可，无需改代码。

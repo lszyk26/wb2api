@@ -32,6 +32,10 @@ docker compose up -d --build
 
 ## 它需要什么上游
 
+> **没有 hub 就没有账号。** 本站不实现 WorkBuddy / CodeBuddy 的登录协议，也没有直连上游的能力：
+> 「OAuth 一键授权」只是把 hub 的登录流程转发给浏览器，「粘贴凭据」只是往 `WB2_HUB_DIR/accounts/` 写个文件等 hub 加载。
+> **hub 没起来，账号页永远是空的，`/v1` 全部 502。**
+
 **本站不生产账号，它只是账号池的门面。** 你必须有一个 OpenAI 兼容的上游网关（默认 `WB2_UPSTREAM=http://127.0.0.1:8788`），本站负责：用户体系、额度、计费、密钥、支付、以及**把请求路由到上游哪个出口**。
 
 上游需要实现的最小契约（`Bearer` 鉴权）：
@@ -66,8 +70,27 @@ docker compose up -d --build
 
 **运行时必须有**
 
-1. **上游账号池网关** —— 参考实现是 [ardeyouxipianyi/workbuddy2api-hub](https://github.com/ardeyouxipianyi/workbuddy2api-hub)（Python，镜像 `ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest`）。本站只做门面，**没有它站点能开但所有接口 502**。
-2. **账号**：WorkBuddy（国际版）或 CodeBuddy（国内版），你自己合法持有。
+1. **上游账号池网关 `wb-proxy-hub`** —— 参考实现是 [ardeyouxipianyi/workbuddy2api-hub](https://github.com/ardeyouxipianyi/workbuddy2api-hub)（Python，镜像 `ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest`）。本站只做门面，**没有它：加不了账号，`/v1` 全部 502**（页面、注册、管理台仍然正常）。
+2. **账号**：WorkBuddy（国际版）或 CodeBuddy（国内版），你自己合法持有，并且**必须经 hub 加进池子**（见 [docs/UPSTREAM.md](docs/UPSTREAM.md#先把上游跑起来)）。
+
+**最短可用路径**，三件事缺一不可：
+
+```bash
+# 1. 起 hub（账号池本体）
+docker run -d --name wb-hub -p 8788:8788 \
+  -e API_KEY=你的上游密钥 -e PANEL_PASSWORD=你的面板密码 \
+  -v $PWD/hub/accounts:/app/accounts -v $PWD/hub/usage:/app/usage \
+  ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest
+
+# 2. 打开 http://你的服务器:8788/panel 登录面板，加一个 WorkBuddy / CodeBuddy 账号
+#    （也可以用本站的「OAuth 一键授权」，前提是第 3 步已经配好）
+
+# 3. 本站 .env 填四个值，然后 docker compose up -d
+#    WB2_UPSTREAM=http://127.0.0.1:8788
+#    WB2_UPSTREAM_KEY=<hub 的 API_KEY>
+#    WB2_HUB_PANEL_PASS=<hub 的 PANEL_PASSWORD>
+#    WB2_HUB_DIR=<挂载出来的 hub/ 目录>
+```
 
 **可选，不配也能正常部署**
 
