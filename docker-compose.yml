@@ -5,6 +5,9 @@ services:
     container_name: wb2api
     restart: unless-stopped
     env_file: .env
+    environment:
+      # 日额度按本地时区 0 点重置，容器里不设就是 UTC（北京 8 点才重置）
+      TZ: ${TZ:-Asia/Shanghai}
     ports:
       # 前面有 nginx 时改成 "127.0.0.1:8078:8078"，别把管理台裸奔在公网
       - "8078:8078"

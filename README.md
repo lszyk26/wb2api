@@ -81,6 +81,8 @@ docker compose up -d --build
 
 **不需要**：nginx（Go 自己托管前端）、Redis、MySQL、外部字体、任何 CDN。
 
+时区：日额度按**本地时区 0 点**重置。容器默认 `TZ=Asia/Shanghai`，改 `TZ` 即可。
+
 ---
 
 ## 功能
