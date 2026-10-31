@@ -1,0 +1,19 @@
+services:
+  wb2:
+    build: .
+    image: wb2api:local
+    container_name: wb2api
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # 前面有 nginx 时改成 "127.0.0.1:8078:8078"，别把管理台裸奔在公网
+      - "8078:8078"
+    volumes:
+      - ./data:/data                 # SQLite、密钥、上传
+      - ./hub:/hub                   # 上游账号目录 + usage.jsonl（可选）
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8078/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

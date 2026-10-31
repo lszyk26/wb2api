@@ -1,0 +1,218 @@
+/* ============================================================
+   Liquid Glass — iOS 26 风格玻璃系统
+   多层叠加：折射层 / 本体色偏 / 边缘高光 / 内阴影 / 噪点 / 镜面反光
+   ============================================================ */
+
+/* 噪点纹理：极轻，只用来消除大面积平坦渐变带来的"塑料感" */
+:root{
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
+}
+
+/* ---------- 基础玻璃 ---------- */
+.glass{
+  position:relative;
+  isolation:isolate;
+  background:
+    linear-gradient(170deg, rgba(255,255,255,.034) 0%, rgba(255,255,255,.006) 34%, rgba(255,255,255,.016) 100%),
+    var(--glass-bg);
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border-radius:var(--r-lg);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -1px 0 rgba(255,255,255,.02),
+    var(--sh-md);
+}
+
+/* 边缘 1px 渐变描边：顶亮、侧弱、底微亮 */
+.glass::before{
+  content:"";
+  position:absolute;inset:0;
+  border-radius:inherit;
+  padding:1px;
+  pointer-events:none;
+  background:linear-gradient(
+    158deg,
+    rgba(255,255,255,.34) 0%,
+    rgba(255,255,255,.11) 22%,
+    rgba(255,255,255,.03) 46%,
+    rgba(255,255,255,.025) 70%,
+    rgba(255,255,255,.12) 100%
+  );
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask-composite:exclude;
+}
+
+/* 镜面反光：只留顶部一条极窄高光，不加噪点
+   （噪点叠在暗玻璃上会变成电视雪花，整卡发脏） */
+.glass::after{
+  content:"";
+  position:absolute;inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  background:radial-gradient(72% 24% at 50% -14%, rgba(255,255,255,.05), transparent 68%);
+}
+
+/* 内容需要盖在 ::after 之上 */
+.glass > *{position:relative;z-index:1}
+
+/* ---------- 玻璃变体 ---------- */
+.glass-1{ /* 最轻：卡片、列表容器 —— 几乎融进背景，只靠边光 */
+  --glass-blur:16px;--glass-sat:110%;
+  --glass-bg:rgba(21,21,21,.22);
+  background:
+    linear-gradient(170deg,rgba(255,255,255,.030),rgba(255,255,255,.006) 46%,rgba(255,255,255,.012)),
+    var(--glass-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.075),
+    inset 0 -1px 0 rgba(255,255,255,.014),
+    var(--sh-sm);
+}
+.glass-2{ /* 标准 */
+  --glass-blur:24px;--glass-sat:118%;
+  --glass-bg:rgba(25,25,25,.34);
+}
+.glass-3{ /* 厚重：弹层、抽屉、浮层 */
+  --glass-blur:36px;--glass-sat:125%;
+  background:
+    linear-gradient(170deg,rgba(255,255,255,.058),rgba(255,255,255,.014) 44%,rgba(255,255,255,.026)),
+    var(--glass-bg-deep);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 -1px 0 rgba(255,255,255,.03),
+    0 24px 60px -28px rgba(0,0,0,.9),
+    var(--sh-lg);
+}
+
+/* 把玻璃做成"厚片"：底部一道内部阴影模拟玻璃厚度 */
+.glass-thick{position:relative}
+.glass-thick::before{box-shadow:inset 0 -14px 20px -18px rgba(0,0,0,.9)}
+
+/* ---------- 局部玻璃（只在元素上模糊，无边框） ---------- */
+.glass-bare{
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  backdrop-filter:blur(20px) saturate(160%);
+  background:rgba(255,255,255,.05);
+}
+
+/* ---------- 顶栏玻璃：延伸进安全区 ---------- */
+.nav-glass{
+  background:linear-gradient(180deg,rgba(10,10,13,.72),rgba(10,10,13,.52));
+  -webkit-backdrop-filter:blur(22px) saturate(170%);
+  backdrop-filter:blur(22px) saturate(170%);
+  border-bottom:1px solid var(--line);
+}
+
+/* ---------- 侧边栏玻璃 ---------- */
+.sb-glass{
+  background:
+    linear-gradient(196deg,rgba(255,255,255,.13) 0%,rgba(255,255,255,.04) 30%,rgba(255,255,255,.03) 70%,rgba(255,255,255,.075) 100%),
+    rgba(16,16,20,.55);
+  -webkit-backdrop-filter:blur(40px) saturate(130%);
+  backdrop-filter:blur(40px) saturate(130%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    inset -1px 0 0 rgba(255,255,255,.06),
+    1px 0 40px -10px rgba(0,0,0,.7);
+}
+
+/* 玻璃上的"高光扫过"（用于强调交互态，一次只跑一次） */
+.sheen{position:relative;overflow:hidden}
+.sheen::after{
+  content:"";
+  position:absolute;inset:-40% -120%;
+  pointer-events:none;
+  background:linear-gradient(72deg,transparent 38%,rgba(255,255,255,.18) 50%,transparent 62%);
+  transform:translate3d(-62%,0,0) skewX(-8deg);
+  opacity:0;
+}
+.sheen.run::after{animation:sheen-sweep 900ms var(--e-out) both}
+@keyframes sheen-sweep{
+  0%{opacity:0;transform:translate3d(-62%,0,0) skewX(-8deg)}
+  24%{opacity:1}
+  100%{opacity:0;transform:translate3d(62%,0,0) skewX(-8deg)}
+}
+
+/* ---------- 按钮 ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:40px;padding:0 17px;border-radius:var(--r-sm);
+  font-size:13.5px;font-weight:620;letter-spacing:-.01em;
+  border:1px solid var(--line-2);
+  background:rgba(255,255,255,.055);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);
+  backdrop-filter:blur(14px) saturate(150%);
+  color:var(--tx-1);
+  transition:
+    transform 260ms var(--e-out),
+    background-color 200ms var(--e-out-soft),
+    border-color 200ms var(--e-out-soft),
+    box-shadow 240ms var(--e-out-soft);
+  will-change:transform;
+  touch-action:manipulation;
+  -webkit-user-select:none;user-select:none;
+}
+.btn:hover{background:rgba(255,255,255,.085);border-color:var(--line-3)}
+.btn:active{transform:scale(.965);background:rgba(255,255,255,.105)}
+.btn.sm{height:32px;padding:0 12px;font-size:12.5px;border-radius:9px}
+.btn.lg{height:48px;padding:0 24px;font-size:14.5px;border-radius:14px}
+.btn.pri{
+  border-color:var(--ac-line);
+  background:linear-gradient(180deg,rgba(255,138,61,.24),rgba(255,138,61,.14));
+  color:#ffe7d6;
+  box-shadow:inset 0 1px 0 rgba(255,220,190,.22);
+}
+.btn.pri:hover{background:linear-gradient(180deg,rgba(255,138,61,.32),rgba(255,138,61,.19))}
+.btn.pri:active{background:linear-gradient(180deg,rgba(255,138,61,.38),rgba(255,138,61,.24))}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--tx-2)}
+.btn.ghost:hover{background:rgba(255,255,255,.055);color:var(--tx-1)}
+.btn.icon{width:38px;padding:0;height:38px}
+.btn:disabled{opacity:.44;pointer-events:none}
+
+/* ---------- 胶囊 / 徽标 ---------- */
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  height:24px;padding:0 10px;border-radius:var(--r-full);
+  font-size:11.5px;font-weight:650;letter-spacing:.01em;
+  border:1px solid var(--line-2);
+  background:rgba(255,255,255,.05);
+  color:var(--tx-2);
+  white-space:nowrap;
+}
+.pill.ok{color:#a9e8c5;border-color:rgba(84,201,138,.28);background:rgba(84,201,138,.10)}
+.pill.warn{color:#f0d29a;border-color:rgba(232,181,82,.28);background:rgba(232,181,82,.10)}
+.pill.err{color:#f6b1ac;border-color:rgba(240,103,95,.28);background:rgba(240,103,95,.10)}
+.pill.ac{color:#ffcba6;border-color:var(--ac-line);background:var(--ac-dim)}
+
+/* ---------- 输入 ---------- */
+.field{display:flex;flex-direction:column;gap:7px}
+.field > label{font-size:12px;font-weight:620;color:var(--tx-3);letter-spacing:.01em}
+.input{
+  height:44px;padding:0 14px;width:100%;
+  border-radius:var(--r-sm);
+  border:1px solid var(--line-2);
+  background:rgba(0,0,0,.38);
+  color:var(--tx-1);
+  font-size:14px;
+  transition:border-color 200ms var(--e-out-soft),box-shadow 260ms var(--e-out-soft),background-color 200ms;
+  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);
+}
+.input::placeholder{color:var(--tx-4)}
+.input:focus{
+  outline:none;border-color:var(--ac-line);
+  background:rgba(0,0,0,.46);
+  box-shadow:0 0 0 3.5px rgba(255,138,61,.10),inset 0 1px 0 rgba(255,255,255,.05);
+}
+textarea.input{height:auto;padding:12px 14px;resize:vertical;line-height:1.6}
+
+/* ---------- 键盘键帽 ---------- */
+kbd{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:22px;height:22px;padding:0 6px;border-radius:6px;
+  border:1px solid var(--line-2);border-bottom-width:2px;
+  background:rgba(255,255,255,.06);
+  font-size:11px;font-family:var(--mono);color:var(--tx-2);
+}

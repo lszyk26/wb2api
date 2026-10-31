@@ -1,0 +1,88 @@
+/* ============================================================
+   WorkBuddy 2.0 — Design Tokens
+   中性黑玻璃 + 单一橙色强调，拒绝紫蓝渐变与彩色阴影
+   ============================================================ */
+:root{
+  /* ---- 底色：纯中性黑，RGB 三通道完全相等，杜绝发蓝发紫 ---- */
+  --bg-0:#090909;
+  --bg-1:#0d0d0d;
+  --bg-2:#131313;
+  --bg-3:#1a1a1a;
+
+  /* ---- 文本：中性灰阶 ---- */
+  --tx-1:#f6f6f6;
+  --tx-2:#b9b9b9;
+  --tx-3:#8a8a8a;
+  --tx-4:#6b6b6b;
+
+  /* ---- 强调：单一暖橙，只做点缀，不做大面积渐变 ---- */
+  --ac:#ff8a3d;
+  --ac-2:#ffb37a;
+  --ac-dim:rgba(255,138,61,.14);
+  --ac-line:rgba(255,138,61,.30);
+
+  /* ---- 语义色（低饱和，避免廉价彩色） ---- */
+  --ok:#54c98a;
+  --warn:#e8b552;
+  --err:#f0675f;
+  --info:#79a8f0;
+
+  /* ---- 玻璃层：暗玻璃 = 吸收而非加白 ----
+     卡片亮度目标：背景 8 → 卡片 16~30，顶底落差 <6
+     玻璃感来自 1px 边缘高光 + 背景模糊，不靠大面积白色叠加 */
+  --glass-bg:rgba(23,23,23,.30);
+  --glass-bg-2:rgba(27,27,27,.46);
+  --glass-bg-deep:rgba(28,28,28,.80);
+  --glass-line:rgba(255,255,255,.085);
+  --glass-line-2:rgba(255,255,255,.125);
+  --glass-blur:24px;
+  --glass-sat:115%;
+
+  /* ---- 线 ---- */
+  --line:rgba(255,255,255,.075);
+  --line-2:rgba(255,255,255,.12);
+  --line-3:rgba(255,255,255,.20);
+
+  /* ---- 圆角 ---- */
+  --r-xs:8px; --r-sm:11px; --r-md:16px; --r-lg:22px; --r-xl:28px; --r-2xl:34px; --r-full:999px;
+
+  /* ---- 阴影（只用黑色投影，不加彩色光） ---- */
+  --sh-sm:0 2px 8px -2px rgba(0,0,0,.5);
+  --sh-md:0 12px 30px -12px rgba(0,0,0,.72);
+  --sh-lg:0 28px 60px -24px rgba(0,0,0,.85);
+  --sh-xl:0 44px 90px -36px rgba(0,0,0,.9);
+
+  /* ---- 字体 ---- */
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+
+  /* ---- 缓动令牌 ---- */
+  --e-out:cubic-bezier(.16,1,.3,1);          /* expo out 主用 */
+  --e-out-soft:cubic-bezier(.22,.61,.36,1);  /* 柔和 */
+  --e-in-out:cubic-bezier(.65,.05,.36,1);
+  --e-spring:cubic-bezier(.34,1.56,.64,1);   /* 轻微过冲 */
+  --e-linear:linear;
+
+  /* ---- 时长令牌 ---- */
+  --t-1:120ms; --t-2:180ms; --t-3:240ms; --t-4:320ms; --t-5:460ms; --t-6:640ms;
+
+  /* ---- 布局 ---- */
+  --nav-h:58px;
+  --sb-w:268px;
+  --pad:clamp(16px,4vw,40px);
+  --maxw:1240px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+
+  /* ---- 背景光场（极低饱和，纯暖中性，去蓝调） ---- */
+  --aura-1:rgba(255,138,61,.048);
+  --aura-2:rgba(255,255,255,.038);
+  --aura-3:rgba(255,170,120,.026);
+}
+
+/* spring 由 JS 求解器驱动：这里只声明默认物理参数，供 CSS 变量回读 */
+:root{
+  --sp-stiff:380;
+  --sp-damp:32;
+  --sp-mass:1;
+}

@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.gitignore
+data
+hub
+*.db
+*.log
+.env
+docs

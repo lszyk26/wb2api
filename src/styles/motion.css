@@ -1,0 +1,212 @@
+/* ============================================================
+   motion.css — 动效原子层（56 种）
+   原则：只动 transform / opacity / filter，全部走合成层
+   ============================================================ */
+
+/* ---------------- 0. 基础工具 ---------------- */
+.will{will-change:transform,opacity}
+.gpu{transform:translateZ(0);backface-visibility:hidden}
+.run-anim{animation-fill-mode:both;animation-timing-function:var(--e-out)}
+
+/* stagger：靠 --i 计算延迟 */
+.stagger > *{
+  opacity:0;
+  animation:k-fade-up 520ms var(--e-out) both;
+  animation-delay:calc(var(--i,0) * 46ms);
+}
+.stagger.in > *{animation-play-state:running}
+.stagger.paused > *{animation-play-state:paused}
+
+/* ---------------- A. 转场 8 ---------------- */
+@keyframes k-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes k-fade-up{from{opacity:0;transform:translate3d(0,16px,0)}to{opacity:1;transform:none}}
+@keyframes k-fade-down{from{opacity:0;transform:translate3d(0,-16px,0)}to{opacity:1;transform:none}}
+@keyframes k-scale-in{0%{opacity:0;transform:scale(.92)}60%{opacity:1}100%{opacity:1;transform:scale(1)}}
+@keyframes k-scale-spring{0%{opacity:0;transform:scale(.82)}100%{opacity:1;transform:scale(1)}}
+@keyframes k-blur-in{0%{opacity:0;filter:blur(14px);transform:scale(1.03)}100%{opacity:1;filter:blur(0);transform:none}}
+@keyframes k-clip-up{from{clip-path:inset(100% 0 0 0);opacity:.4}to{clip-path:inset(0 0 0 0);opacity:1}}
+@keyframes k-circle{0%{clip-path:circle(0% at var(--cx,50%) var(--cy,50%));opacity:.6}100%{clip-path:circle(150% at var(--cx,50%) var(--cy,50%));opacity:1}}
+@keyframes k-depth-push{0%{opacity:0;transform:perspective(1200px) translateZ(-160px) translateY(24px)}100%{opacity:1;transform:perspective(1200px) translateZ(0) translateY(0)}}
+@keyframes k-flip-x{0%{opacity:0;transform:perspective(900px) rotateX(-16deg) translateY(18px)}100%{opacity:1;transform:none}}
+@keyframes k-wipe-right{0%{clip-path:inset(0 100% 0 0)}100%{clip-path:inset(0 0 0 0)}}
+@keyframes k-iris{0%{opacity:.2;transform:scale(1.12);filter:blur(10px)}100%{opacity:1;transform:none;filter:none}}
+
+.a-fade{animation:k-fade-in 300ms var(--e-out) both}
+.a-up{animation:k-fade-up 460ms var(--e-out) both}
+.a-down{animation:k-fade-down 460ms var(--e-out) both}
+.a-scale{animation:k-scale-in 380ms var(--e-out) both}
+.a-spring{animation:k-scale-spring 620ms cubic-bezier(.34,1.42,.64,1) both}
+.a-blur{animation:k-blur-in 560ms var(--e-out) both}
+.a-clip{animation:k-clip-up 620ms var(--e-out) both}
+.a-circle{animation:k-circle 700ms var(--e-out) both}
+.a-depth{animation:k-depth-push 640ms var(--e-out) both}
+.a-flipx{animation:k-flip-x 560ms var(--e-out) both}
+.a-wipe{animation:k-wipe-right 620ms var(--e-out) both}
+.a-iris{animation:k-iris 700ms var(--e-out) both}
+
+/* 共享元素：靠 view-transition 或 FLIP，这里给视觉标记 */
+.a-shared{animation:k-scale-in 420ms var(--e-out) both;transform-origin:top left}
+
+/* ---------------- B. 编排 8 ---------------- */
+@keyframes k-row-in{0%{opacity:0;transform:translate3d(-10px,0,0)}100%{opacity:1;transform:none}}
+@keyframes k-ripple-in{0%{opacity:0;transform:scale(.96)}60%{opacity:1}100%{opacity:1;transform:scale(1)}}
+@keyframes k-collapse{0%{opacity:1;transform:scaleY(1);filter:blur(0)}100%{opacity:0;transform:scaleY(.6);filter:blur(4px)}}
+@keyframes k-accordion{from{grid-template-rows:0fr;opacity:0}to{grid-template-rows:1fr;opacity:1}}
+@keyframes k-magnet{0%{transform:translate3d(0,0,0)}100%{transform:translate3d(var(--mx,0),var(--my,0),0)}}
+@keyframes k-skeleton{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+.b-row{animation:k-row-in 420ms var(--e-out) both;animation-delay:calc(var(--i,0)*52ms)}
+.b-ripple{animation:k-ripple-in 420ms var(--e-out) both}
+.b-collapse{animation:k-collapse 380ms var(--e-in-out) both}
+.b-accordion{display:grid;animation:k-accordion 420ms var(--e-out) both}
+
+/* 磁吸 hover */
+.magnet{transition:transform 380ms var(--e-out);will-change:transform}
+.magnet:hover{transform:translate3d(var(--mx,0),var(--my,0),0) scale(1.02)}
+
+/* 悬停预览 */
+.peek{position:relative}
+.peek-card{
+  position:absolute;z-index:9;top:calc(100% + 8px);left:0;
+  min-width:200px;padding:12px 14px;border-radius:var(--r-md);
+  opacity:0;transform:translateY(-6px) scale(.97);pointer-events:none;
+  transition:opacity 200ms var(--e-out-soft),transform 300ms var(--e-out);
+}
+.peek:hover .peek-card{opacity:1;transform:none;pointer-events:auto}
+
+/* 骨架屏 */
+.skel{
+  background:linear-gradient(90deg,rgba(255,255,255,.05) 25%,rgba(255,255,255,.10) 37%,rgba(255,255,255,.05) 63%);
+  background-size:200% 100%;
+  animation:k-skeleton 1.35s ease-in-out infinite;
+  border-radius:8px;
+}
+
+/* ---------------- C. 手势 8（JS 驱动，这里给容器） ---------------- */
+.gesture-stage{
+  position:relative;overflow:hidden;border-radius:var(--r-md);
+  background:rgba(0,0,0,.25);
+  border:1px solid var(--line);
+  touch-action:none;
+}
+.drag-item{will-change:transform;touch-action:none;cursor:grab}
+.drag-item:active{cursor:grabbing}
+.sheet{
+  will-change:transform;touch-action:none;
+  border-radius:var(--r-xl) var(--r-xl) 0 0;
+}
+.elastic{overscroll-behavior:contain}
+
+/* ---------------- D. 反馈 10 ---------------- */
+@keyframes k-press{0%{transform:scale(1)}40%{transform:scale(.94)}100%{transform:scale(1)}}
+@keyframes k-shake{
+  0%,100%{transform:translate3d(0,0,0)}
+  15%{transform:translate3d(-6px,0,0)}
+  30%{transform:translate3d(5px,0,0)}
+  45%{transform:translate3d(-4px,0,0)}
+  60%{transform:translate3d(3px,0,0)}
+  80%{transform:translate3d(-1px,0,0)}
+}
+@keyframes k-check{
+  0%{stroke-dashoffset:26;opacity:.4}
+  100%{stroke-dashoffset:0;opacity:1}
+}
+@keyframes k-ring-pop{0%{transform:scale(.5);opacity:.9}100%{transform:scale(2.1);opacity:0}}
+@keyframes k-btn-wave{0%{transform:scale(0);opacity:.5}100%{transform:scale(2.6);opacity:0}}
+@keyframes k-burst{0%{transform:translate(0,0) scale(.4);opacity:1}100%{transform:translate(var(--bx),var(--by)) scale(1);opacity:0}}
+@keyframes k-toast-in{0%{opacity:0;transform:translate3d(0,18px,0) scale(.96)}100%{opacity:1;transform:none}}
+@keyframes k-toast-out{0%{opacity:1;transform:none}100%{opacity:0;transform:translate3d(0,12px,0) scale(.97)}}
+@keyframes k-odometer{0%{transform:translateY(100%);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes k-liquid{0%{transform:translateX(-100%)}100%{transform:translateX(0)}}
+@keyframes k-glow-focus{0%{box-shadow:0 0 0 0 rgba(255,138,61,.35)}100%{box-shadow:0 0 0 9px rgba(255,138,61,0)}}
+
+.d-press:active{animation:k-press 260ms var(--e-out)}
+.d-shake{animation:k-shake 460ms var(--e-in-out) both}
+.d-check path{stroke-dasharray:26;stroke-dashoffset:26}
+.d-check.run path{animation:k-check 460ms var(--e-out) forwards}
+.d-toast{animation:k-toast-in 420ms var(--e-out) both}
+.d-toast.out{animation:k-toast-out 240ms var(--e-in-out) both}
+.d-glow:focus{animation:k-glow-focus 620ms var(--e-out)}
+
+/* ---------------- E. 数据 8 ---------------- */
+@keyframes k-draw{to{stroke-dashoffset:0}}
+@keyframes k-grow-h{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes k-grow-v{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes k-area{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes k-dot-pop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes k-radar{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+
+.e-draw{stroke-dasharray:var(--len,240);stroke-dashoffset:var(--len,240);animation:k-draw 1100ms var(--e-out) both}
+.e-grow-h{transform-origin:left center;animation:k-grow-h 700ms var(--e-out) both}
+.e-grow-v{transform-origin:bottom center;animation:k-grow-v 700ms var(--e-out) both;animation-delay:calc(var(--i,0)*60ms)}
+.e-area{animation:k-area 780ms var(--e-out) both}
+.e-dot{animation:k-dot-pop 520ms var(--e-out) both;animation-delay:calc(var(--i,0)*70ms)}
+.e-radar{transform-origin:center;animation:k-radar 720ms var(--e-out) both}
+
+/* 数字滚动容器 */
+.odo{display:inline-flex;overflow:hidden;height:1em;line-height:1;vertical-align:bottom}
+.odo span{display:block;animation:k-odometer 520ms var(--e-out) both}
+
+/* ---------------- F. 氛围 8 ---------------- */
+@keyframes k-aurora-a{
+  0%{transform:translate3d(-6%,-4%,0) scale(1.05)}
+  50%{transform:translate3d(5%,6%,0) scale(1.15)}
+  100%{transform:translate3d(-6%,-4%,0) scale(1.05)}
+}
+@keyframes k-aurora-b{
+  0%{transform:translate3d(4%,3%,0) scale(1.1)}
+  50%{transform:translate3d(-5%,-7%,0) scale(1)}
+  100%{transform:translate3d(4%,3%,0) scale(1.1)}
+}
+@keyframes k-breathe{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.55)}}
+@keyframes k-blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes k-noise{0%{transform:translate3d(0,0,0)}25%{transform:translate3d(-2%,1%,0)}50%{transform:translate3d(1%,-2%,0)}75%{transform:translate3d(2%,2%,0)}100%{transform:translate3d(0,0,0)}}
+@keyframes k-scan{0%{transform:translateY(-120%)}100%{transform:translateY(320%)}}
+@keyframes k-wave{0%{transform:scale(.7);opacity:.55}100%{transform:scale(2.4);opacity:0}}
+@keyframes k-dash{to{stroke-dashoffset:-24}}
+
+.f-breathe{animation:k-breathe 2.4s var(--e-in-out) infinite}
+.f-blink{animation:k-blink 1.05s steps(1,end) infinite}
+.f-scan{animation:k-scan 3.4s linear infinite}
+.f-wave{animation:k-wave 2.6s var(--e-out) infinite}
+.f-dash{animation:k-dash 1.1s linear infinite}
+.aurora{position:absolute;inset:-30%;pointer-events:none;filter:blur(46px);opacity:.9}
+.aurora i{position:absolute;display:block;border-radius:50%}
+.aurora i:nth-child(1){
+  width:52%;height:46%;left:6%;top:2%;
+  background:radial-gradient(circle at 50% 50%,var(--aura-1),transparent 68%);
+  animation:k-aurora-a 22s var(--e-in-out) infinite;
+}
+.aurora i:nth-child(2){
+  width:46%;height:52%;right:2%;top:18%;
+  background:radial-gradient(circle at 50% 50%,var(--aura-2),transparent 70%);
+  animation:k-aurora-b 27s var(--e-in-out) infinite;
+}
+.aurora i:nth-child(3){
+  width:64%;height:40%;left:22%;bottom:-6%;
+  background:radial-gradient(circle at 50% 50%,var(--aura-3),transparent 72%);
+  animation:k-aurora-a 32s var(--e-in-out) infinite reverse;
+}
+
+/* ---------------- G. 导航 6 ---------------- */
+@keyframes k-ink{from{transform:translate3d(var(--fx,0),var(--fy,0),0) scaleX(var(--fs,1))}to{transform:none}}
+@keyframes k-hamburger-top{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(6px) rotate(45deg)}}
+@keyframes k-hamburger-bot{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(-6px) rotate(-45deg)}}
+@keyframes k-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+.g-ink{animation:k-ink 380ms var(--e-out) both}
+.g-burger-top{transform-origin:center;animation:k-hamburger-top 320ms var(--e-out) both}
+.g-burger-bot{transform-origin:center;animation:k-hamburger-bot 320ms var(--e-out) both}
+.g-progress{transform-origin:left center;animation:k-progress 120ms linear both}
+
+/* 滚动隐藏顶栏 */
+.nav-hide{transform:translate3d(0,-100%,0);transition:transform 340ms var(--e-out)}
+.nav-show{transform:none;transition:transform 340ms var(--e-out)}
+
+/* 锚点高亮 */
+.anchor-hl{position:relative}
+.anchor-hl::after{
+  content:"";position:absolute;left:0;right:0;bottom:-6px;height:2px;border-radius:2px;
+  background:var(--ac);transform:scaleX(0);transform-origin:left;transition:transform 340ms var(--e-out);
+}
+.anchor-hl.on::after{transform:scaleX(1)}

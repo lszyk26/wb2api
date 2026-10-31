@@ -1,0 +1,120 @@
+/* ============================================================
+   流畅度档位（2026-10-24）
+   老/低端手机默认特效吃性能，给出四档手动切换：
+     full     完整：默认效果，模糊 + 动效全开
+     balanced 均衡：去掉背景模糊（最贵的一项），动效保留
+     lite     精简：去模糊 + 关背景光场动画/噪点/网格 + 过渡压到 120ms
+     smooth   流畅：全部动效与过渡关闭、背景纯色、阴影去掉（最省）
+   档位写在 <html data-perf="...">，由 src/lib/perf.js 维护
+   ============================================================ */
+
+/* ---------- 均衡 ---------- */
+html[data-perf="balanced"]{
+  --glass-blur:0px;
+  --glass-sat:100%;
+  --glass-bg:rgba(22,22,24,.68);
+  --glass-bg-2:rgba(26,26,28,.80);
+  --glass-bg-deep:rgba(26,26,28,.92);
+}
+html[data-perf="balanced"] .glass,
+html[data-perf="balanced"] .glass-1,
+html[data-perf="balanced"] .glass-2,
+html[data-perf="balanced"] .glass-3,
+html[data-perf="balanced"] header,
+html[data-perf="balanced"] aside{
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+}
+html[data-perf="balanced"] .bg .noise{ opacity:.28 }
+
+/* ---------- 精简 ---------- */
+html[data-perf="lite"]{
+  --glass-blur:0px;
+  --glass-sat:100%;
+  --glass-bg:rgba(22,22,24,.74);
+  --glass-bg-2:rgba(26,26,28,.86);
+  --glass-bg-deep:rgba(26,26,28,.95);
+}
+html[data-perf="lite"] .glass,
+html[data-perf="lite"] .glass-1,
+html[data-perf="lite"] .glass-2,
+html[data-perf="lite"] .glass-3,
+html[data-perf="lite"] header,
+html[data-perf="lite"] aside{
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+}
+html[data-perf="lite"] .bg .aurora i{ animation:none !important }
+html[data-perf="lite"] .bg .grid,
+html[data-perf="lite"] .bg .noise{ display:none }
+html[data-perf="lite"] *,
+html[data-perf="lite"] *::before,
+html[data-perf="lite"] *::after{
+  transition-duration:.12s !important;
+  animation-duration:.18s !important;
+}
+
+/* ---------- 流畅 ---------- */
+html[data-perf="smooth"] .bg{ display:none !important }
+html[data-perf="smooth"] *,
+html[data-perf="smooth"] *::before,
+html[data-perf="smooth"] *::after{
+  animation:none !important;
+  transition:none !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+}
+html[data-perf="smooth"]{
+  --glass-bg:rgba(20,20,22,.96);
+  --glass-bg-2:rgba(24,24,26,.97);
+  --glass-bg-deep:#1a1a1c;
+}
+html[data-perf="smooth"] .glass,
+html[data-perf="smooth"] .glass-1,
+html[data-perf="smooth"] .glass-2,
+html[data-perf="smooth"] .glass-3,
+html[data-perf="smooth"] .card,
+html[data-perf="smooth"] .panel{
+  box-shadow:none !important;
+}
+
+/* 系统级省电/减少动效偏好：默认也走精简（用户手动选过则以手动为准，由脚本判断） */
+@media (prefers-reduced-motion: reduce){
+  html[data-perf="full"] .bg .aurora i{ animation:none !important }
+}
+
+/* ---------- 非「完整」档：半透明/毛玻璃栏位容易看出后面内容，统一压成实心 ---------- */
+html[data-perf="balanced"] .tb-in,
+html[data-perf="lite"] .tb-in,
+html[data-perf="smooth"] .tb-in{
+  background:#0b0b0e !important;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+html[data-perf="balanced"] .topbar,
+html[data-perf="lite"] .topbar,
+html[data-perf="smooth"] .topbar{ background:#0b0b0e !important }
+
+html[data-perf="balanced"] .glass,
+html[data-perf="lite"] .glass,
+html[data-perf="smooth"] .glass{
+  background:#141418 !important;
+}
+html[data-perf="smooth"] .glass{ background:#131316 !important }
+
+/* 侧栏/抽屉同样实心，避免文字透叠 */
+html[data-perf="balanced"] .sidebar,
+html[data-perf="lite"] .sidebar,
+html[data-perf="smooth"] .sidebar,
+html[data-perf="balanced"] aside,
+html[data-perf="lite"] aside,
+html[data-perf="smooth"] aside{ background:#0e0e11 !important }
+
+/* 底部悬浮按钮不压住正文：给滚动区留出安全区 */
+html[data-perf="balanced"] .scroll,
+html[data-perf="lite"] .scroll,
+html[data-perf="smooth"] .scroll{ padding-bottom:64px }
+
+/* 流畅档：去掉过亮的渐变文字/发光，避免发糊 */
+html[data-perf="smooth"] .eyebrow,
+html[data-perf="smooth"] .pill{ box-shadow:none !important; text-shadow:none !important }
+html[data-perf="smooth"] *{ text-shadow:none !important }

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#090909" />
+<meta name="color-scheme" content="dark" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="format-detection" content="telephone=no" />
+<meta name="description" content="WorkBuddy 2.0 · 一个 OpenAI 兼容接口，背后是整池 WorkBuddy 账号。注册即送 3000 点。" />
+<meta property="og:title" content="WorkBuddy 2.0 · OpenAI 兼容 API" />
+<meta property="og:description" content="改个 base_url 就能用。群友授权的 WorkBuddy / CodeBuddy 账号自动路由、冷却、轮换。" />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230a0a0c'/><circle cx='50' cy='50' r='26' fill='none' stroke='%23ff8a3d' stroke-width='7' stroke-linecap='round' stroke-dasharray='120 44' transform='rotate(-45 50 50)'/></svg>" />
+<title>WorkBuddy 2.0 · OpenAI 兼容 API</title>
+
+<!-- ------------------------------------------------------------
+     构建自愈：如果入口 JS 已被新构建删除（浏览器拿着旧 HTML），
+     自动带时间戳重载一次，避免白屏。
+     ------------------------------------------------------------ -->
+<script>
+  (function () {
+    var KEY = 'wb2-reload-guard';
+    var last = 0;
+    try { last = parseInt(sessionStorage.getItem(KEY) || '0', 10) || 0; } catch (e) {}
+    // 5 秒内只允许重载一次，防止死循环
+    if (Date.now() - last < 5000) return;
+    window.addEventListener('error', function (e) {
+      var t = e.target;
+      if (!t || t.tagName !== 'SCRIPT' || !t.src || t.src.indexOf('/assets/') < 0) return;
+      try { sessionStorage.setItem(KEY, String(Date.now())); } catch (err) {}
+      var u = new URL(location.href);
+      u.searchParams.set('v', String(Date.now()));
+      location.replace(u.toString());
+    }, true);
+  })();
+</script>
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="/src/main.js"></script>
+<script>
+(function () {
+  var el = null;
+  function show(txt) {
+    if (!el) {
+      el = document.createElement('div');
+      el.setAttribute('data-wb2-notice', '1');
+      el.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99998;background:linear-gradient(90deg,#ff8a3d,#ffb37a);color:#231409;font-weight:600;font-size:13px;line-height:1.5;text-align:center;padding:7px 12px;box-shadow:0 2px 10px rgba(0,0,0,.18)';
+      document.body.appendChild(el);
+    }
+    el.textContent = txt;
+  }
+  function hide() { if (el) { el.remove(); el = null; } }
+  function check() {
+    fetch('/api/status', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      var up = (d && d.upstream) || {};
+      if (up.accounts_ready === 0) show('上游 WorkBuddy 账号池正在冷却（约 2 小时自动恢复），当前请求可能失败');
+      else hide();
+    }).catch(function () {});
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', check);
+  else check();
+  setInterval(check, 60000);
+})();
+</script>
+</body>
+</html>

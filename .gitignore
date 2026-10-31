@@ -1,0 +1,26 @@
+# 依赖与产物
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 运行时数据：数据库、密钥、上传、日志
+server/data/
+data/
+hub/
+*.db
+*.db-journal
+*.sqlite*
+*.log
+
+# 配置与备份（.env.example 要留）
+.env
+.env.*
+!.env.example
+*.bak
+*.bak-*
+*.orig
+*.pre-*
+
+# 系统
+.DS_Store
+Thumbs.db
