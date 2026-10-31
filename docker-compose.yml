@@ -1,17 +1,17 @@
 services:
-  # ---------------- 账号池本体（上游）----------------
-  # 加账号、账号轮转、realm 分流都在这里；本站只是它的门面。
-  # 面板：http://服务器IP:8788/   密码：.env 里的 WB2_HUB_PANEL_PASS
+  # ---------------- Upstream: the account pool itself ----------------
+  # Adding accounts, rotation and realm splitting all happen here; this repo is just the facade.
+  # Panel: http://SERVER_IP:8788/   Password: WB2_HUB_PANEL_PASS in .env
   hub:
     image: ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest
     container_name: wb-hub
     restart: unless-stopped
     environment:
       TZ: ${TZ:-Asia/Shanghai}
-      # 本站用这个 key 调上游，两边必须是同一个值
+      # This app calls the hub with this key; both sides must use the same value
       API_KEY: ${WB2_UPSTREAM_KEY:-}
-    # 面板密码只能走命令行参数（不是环境变量），默认 admin，务必改掉
-    # 这里复刻镜像原本的启动参数，只多一个 --panel-password
+    # The panel password can only be a CLI flag (no env var); default is admin, always change it.
+    # This reproduces the image's own command and adds --panel-password.
     command:
       - python
       - wb_proxy.py
@@ -21,10 +21,10 @@ services:
       - --panel-password
       - ${WB2_HUB_PANEL_PASS:-admin}
     volumes:
-      - ./hub/accounts:/app/accounts    # 账号凭据 + settings.json（面板密码哈希也在这里）
-      - ./hub/usage:/app/usage          # 用量流水，本站据此对账
+      - ./hub/accounts:/app/accounts    # credentials + settings.json (holds the panel password hash)
+      - ./hub/usage:/app/usage          # usage log, read by this app for reconciliation
     ports:
-      # 加号用的面板。只想自己用就改成 127.0.0.1:8788:8788 再走 SSH 隧道
+      # Panel used to add accounts. For local-only access use 127.0.0.1:8788:8788 and an SSH tunnel.
       - "8788:8788"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8788/"]
@@ -33,7 +33,7 @@ services:
       retries: 3
       start_period: 20s
 
-  # ---------------- 本站：门面 + 前端 ----------------
+  # ---------------- This app: facade + frontend ----------------
   wb2:
     build: .
     image: wb2api:local
@@ -44,17 +44,17 @@ services:
       hub:
         condition: service_started
     environment:
-      # 日额度按本地时区 0 点重置，容器里不设就是 UTC（北京 8 点才重置）
+      # Daily quotas reset at local midnight; containers default to UTC
       TZ: ${TZ:-Asia/Shanghai}
-      # 容器内用服务名找 hub；裸机部署才用 127.0.0.1
+      # Inside compose, resolve the hub by service name; bare metal uses 127.0.0.1
       WB2_UPSTREAM: ${WB2_UPSTREAM:-http://hub:8788}
       WB2_HUB_DIR: /hub
     ports:
-      # 前面有 nginx 时改成 "127.0.0.1:8078:8078"，别把管理台裸奔在公网
+      # Put nginx in front and change this to "127.0.0.1:8078:8078" — don't leave the admin panel public
       - "8078:8078"
     volumes:
-      - ./data:/data                 # SQLite、密钥、上传
-      - ./hub:/hub                   # 与 hub 共用账号目录 + usage.jsonl
+      - ./data:/data                 # SQLite, keys, uploads
+      - ./hub:/hub                   # shared with the hub: account dir + usage.jsonl
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8078/api/health"]
       interval: 30s

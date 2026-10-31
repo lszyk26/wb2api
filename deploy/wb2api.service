@@ -5,10 +5,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# 按实际路径改
+# Adjust to your install path
 WorkingDirectory=/opt/wb2api
 ExecStart=/opt/wb2api/bin/wb2api
-# 配置：/opt/wb2api/.env（也可用 WB2_ENV_FILE 指向别处）
+# Config: /opt/wb2api/.env (or point WB2_ENV_FILE elsewhere)
 Environment=WB2_DATA_DIR=/opt/wb2api/data
 Environment=WB2_STATIC_DIR=/opt/wb2api/dist
 Environment=WB2_LISTEN=127.0.0.1:8078
@@ -16,7 +16,7 @@ EnvironmentFile=-/opt/wb2api/.env
 Restart=always
 RestartSec=3
 LimitNOFILE=65535
-# 流式响应不能设超时
+# No timeouts: /v1 responses stream for a long time
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full

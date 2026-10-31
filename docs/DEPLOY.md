@@ -1,5 +1,7 @@
 # 部署
 
+**简体中文** | [English](en/DEPLOY.md)
+
 三种方式，任选其一。
 
 ## 一、Docker（推荐）

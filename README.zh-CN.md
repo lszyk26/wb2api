@@ -1,0 +1,173 @@
+# WorkBuddy 2.0 · 学生 API
+
+[English](README.md) | **简体中文**
+
+把一组 WorkBuddy / CodeBuddy 账号，变成**一个 OpenAI 兼容接口**。
+
+Go 单二进制 + Vue 3 前端 + SQLite，自带注册登录、密钥管理、用量计费、档位/加油包、邀请返利、在线支付、账号池健康与分流。前端产物由 Go 直接托管，一个进程就能起站。
+
+> AGPL-3.0。改了自己开站也必须开源。
+
+![落地页](docs/screenshots/landing.png)
+
+---
+
+## 30 秒起站
+
+```bash
+git clone https://github.com/lszyk26/wb2api.git && cd wb2api
+bash deploy/install.sh          # 生成密钥 → 写 .env → 起 hub + 本站
+```
+
+装完访问 `http://服务器IP:8078`，管理员账号 `admin`，密码在 `.env` 的 `WB2_ADMIN_PASS`（脚本随机生成并打印）。
+
+想手动来：
+
+```bash
+cp .env.example .env && vi .env   # 至少填 WB2_PUBLIC_URL、WB2_UPSTREAM、WB2_UPSTREAM_KEY
+docker compose up -d --build
+```
+
+没有 Docker？见 [docs/DEPLOY.md](docs/DEPLOY.md)（systemd + nginx + 手动编译）。
+
+---
+
+## 它需要什么上游
+
+> **没有 hub 就没有账号。** 本站不实现 WorkBuddy / CodeBuddy 的登录协议，也没有直连上游的能力：
+> 「OAuth 一键授权」只是把 hub 的登录流程转发给浏览器，「粘贴凭据」只是往 `WB2_HUB_DIR/accounts/` 写个文件等 hub 加载。
+> **hub 没起来，账号页永远是空的，`/v1` 全部 502。**
+
+**本站不生产账号，它只是账号池的门面。** 你必须有一个 OpenAI 兼容的上游网关（默认 `WB2_UPSTREAM=http://127.0.0.1:8788`），本站负责：用户体系、额度、计费、密钥、支付、以及**把请求路由到上游哪个出口**。
+
+上游需要实现的最小契约（`Bearer` 鉴权）：
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| GET | `/v1/models` | 模型清单，支持 `?realm=cn` |
+| POST | `/v1/chat/completions` | 对话，支持 SSE 透传 |
+| POST | `/accounts/test` | 账号自检（`{uid, model}`） |
+| POST | `/accounts/set` | 绑定出口（`{uid, proxySlot}`） |
+| POST | `/accounts/delete` | 移出账号池 |
+| POST | `/accounts/login/start` `…/poll` | OAuth 一键授权 |
+
+完整字段与返回值见 [docs/UPSTREAM.md](docs/UPSTREAM.md)。上游账号目录（`WB2_HUB_DIR/accounts/*.json`）与用量文件（`WB2_USAGE_PATH`）也会被本站读写，用于账号提交与真实用量对账。
+
+---
+
+## 依赖与环境
+
+**构建机**（只用 Docker 部署的话什么都不用装）
+
+| 需要 | 版本 | 用途 |
+|---|---|---|
+| Node.js | ≥ 18（推荐 22） | 只用于 `vite build` |
+| Go | ≥ 1.22 | 只用于编译后端 |
+| Docker + compose | 任意近期版本 | 一键部署只需要这个 |
+
+**第三方库**：全部锁在 `package-lock.json` / `go.sum` 里，无 CDN、无外部字体、无 cgo。
+
+- 前端 3 个直接依赖：`vue`、`vite`、`@vitejs/plugin-vue`（`npm ci` 装 32 个包，约 6 秒）
+- 后端 3 个直接依赖：`gorm.io/gorm`、`github.com/glebarez/sqlite`（纯 Go SQLite，**不需要 gcc / cgo**）、`golang.org/x/crypto`（bcrypt），其余全是标准库
+
+**运行时必须有**
+
+1. **上游账号池网关 `wb-proxy-hub`** —— 参考实现是 [ardeyouxipianyi/workbuddy2api-hub](https://github.com/ardeyouxipianyi/workbuddy2api-hub)（Python，镜像 `ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest`）。本站只做门面，**没有它：加不了账号，`/v1` 全部 502**（页面、注册、管理台仍然正常）。
+2. **账号**：WorkBuddy（国际版）或 CodeBuddy（国内版），你自己合法持有，并且**必须经 hub 加进池子**（见 [docs/UPSTREAM.md](docs/UPSTREAM.md#先把上游跑起来)）。
+
+**最短可用路径**：`bash deploy/install.sh` 会把 hub 一起拉起来，你只剩一步——加号。
+
+1. 打开 `http://服务器IP:8788/`（账号池面板），密码是 `.env` 里的 `WB2_HUB_PANEL_PASS`
+2. 登录 → `Login new account` → 选国际版 / 国内版 → 在浏览器里完成授权
+3. 回本站「账号」页就能看到这个号；在此之前 `/v1` 返回 502 是正常的
+
+不想用一键脚本、手动起 hub：
+
+```bash
+docker run -d --name wb-hub --restart unless-stopped -p 8788:8788 \
+  -e API_KEY=你的上游密钥 -e TZ=Asia/Shanghai \
+  -v $PWD/hub/accounts:/app/accounts -v $PWD/hub/usage:/app/usage \
+  ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest \
+  python wb_proxy.py --host 0.0.0.0 --lan --panel-password 你的面板密码
+```
+
+两点容易踩空：
+
+- `--host 0.0.0.0` 不能省，否则容器外连不上（connection reset）
+- **面板密码只能走 `--panel-password` 参数，没有这个环境变量**；默认 `admin`，不改等于裸奔
+
+然后本站填 `WB2_UPSTREAM`（同机 `http://127.0.0.1:8788`，compose 内用 `http://hub:8788`）、`WB2_UPSTREAM_KEY=<同一个 API_KEY>`、`WB2_HUB_PANEL_PASS=<面板密码>`、`WB2_HUB_DIR=<挂载出来的 hub/>`。
+
+---
+
+## 功能
+
+- **用户侧**：注册 / 邮箱验证码登录 / GitHub OAuth 一键登录、找回密码、邀请码返利、抽奖、站内演练场
+- **密钥**：`sk-wb-` 开头，按档位限数量，库里只存哈希 + 加密副本，支持轮换
+- **OpenAI 兼容**：`/v1/chat/completions`（流式 / 非流式）、`/v1/models`、`/v1/messages`（Anthropic 风格）
+- **计费**：点数 = (输入×2 + 输出×8)/1000 × 模型倍率，日额度按天重置，超额自动吃加油包
+- **档位**：赞助档（LV1~LV3）与贡献档（C1~C4，按授权账号数现算）取较高日额度，C1~C3 可叠 1.5 倍、封顶 30 万点/日
+- **账号池**：OAuth 授权 → 自检 → 入池 → 轮转绑出口；会话级 cn/intl 分流，单侧失败自动换边重试
+- **支付**：彩虹易支付（epay）/ 木瓦（mupa）双驱动，异步回调验签
+- **管理台**：用户、订单、卡密、账号审核、档位改价、抽奖奖池、上游健康、结算
+- **前端**：iOS 暗玻璃风格、50+ 动效、四档流畅度切换、移动端抽屉；断网/失败/空态三态分明
+
+---
+
+## 配置
+
+所有配置走 `.env`（或 `WB2_ENV_FILE` 指向的文件），改完重启即可。常用项：
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `WB2_LISTEN` | `127.0.0.1:8078` | 监听地址，容器内用 `0.0.0.0:8078` |
+| `WB2_PUBLIC_URL` | `http://localhost:8078` | **必填**，邀请链接 / 支付回调 / 邮件页脚都用它 |
+| `WB2_DATA_DIR` | `./data` | 数据目录（SQLite + 上传 + hub 挂载点） |
+| `WB2_STATIC_DIR` | `./dist` | 前端产物，留空则只提供 API |
+| `WB2_JWT_SECRET` | 随机 | 登录令牌密钥，**不填则每次重启掉线** |
+| `WB2_ENC_KEY` | 同 JWT | 账号凭据加密密钥，**改了已存凭据解不开** |
+| `WB2_ADMIN_USER` / `WB2_ADMIN_PASS` | `admin` / 随机并打日志 | 首个管理员 |
+| `WB2_UPSTREAM` / `WB2_UPSTREAM_KEY` | `http://127.0.0.1:8788` / 空 | 上游网关与鉴权 |
+| `WB2_HUB_DIR` | `$WB2_DATA_DIR/hub` | 上游账号/用量目录 |
+| `WB2_RESEND_KEY` / `WB2_SMTP_*` | 空 | 发信（Resend 优先，SMTP 兜底）；都没配则跳过邮箱验证 |
+| `WB2_GH_ID` / `WB2_GH_SECRET` | 空 | GitHub OAuth 登录，不填则隐藏入口 |
+| `WB2_PAY_*` | 空 | 支付通道，不填则只能手动转账确认 |
+
+完整清单和说明见 [.env.example](.env.example)。
+
+---
+
+## 目录
+
+```
+server/          Go 后端（net/http + GORM + 纯 Go SQLite，无 cgo）
+  gateway.go     /v1 转发、流式透传、cn/intl 分流与故障转移
+  plans.go       档位、额度、叠加规则
+  payments.go    支付驱动
+  upstream.go    上游账号目录 / 用量对账
+src/             Vue 3 前端（Vite，无 vue-router，App.vue 切页）
+  pages/         Landing / Dashboard / Keys / Usage / Pricing / Accounts / Admin …
+  styles/        设计 token、暗玻璃、动效、性能分级
+deploy/          install.sh / systemd unit / nginx 片段
+docs/            部署与上游契约
+```
+
+---
+
+## 踩过的坑（改代码前值得看）
+
+- `/v1` 的 SSE **必须** `proxy_buffering off`，否则流式变成一次性吐完
+- `index.html` 必须 `no-store`，assets 带 hash 可长缓存；否则旧 HTML 指向已删除的 JS → 白屏
+- Vue scoped CSS 的根类名不要用 `.lg/.sm/.pri/.icon/.glass` 这类工具类，会误伤全局按钮
+- `position:fixed` 弹窗必须 `Teleport to body`，祖先的 `will-change:transform` 会劫持包含块
+- 动画只碰 `transform/opacity`；低端机自动降级到纯色背景
+
+---
+
+## 免责声明
+
+本项目是账号池的**管理面板与计费网关**，不包含、也不分发任何账号凭据。使用前请确认你对接的账号与上游服务条款允许这种用法；由此产生的封号、限流、法律与合规风险由部署者自行承担。
+
+## 许可证
+
+[AGPL-3.0](LICENSE)
