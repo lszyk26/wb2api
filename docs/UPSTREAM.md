@@ -6,6 +6,28 @@
 
 **参考实现**：[ardeyouxipianyi/workbuddy2api-hub](https://github.com/ardeyouxipianyi/workbuddy2api-hub)（Python，镜像 `ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest`，端口 8788）。它的脚本里已经有 `/accounts/*`、`/panel/login`、`X-Realm`，直接对接即可，无需改代码。
 
+## 先把上游跑起来
+
+```bash
+docker run -d --name wb-hub --restart unless-stopped \
+  -p 8788:8788 \
+  -e API_KEY=换成你的上游密钥 \
+  -e PANEL_PASSWORD=换成你的面板密码 \
+  -v $PWD/hub/accounts:/app/accounts \
+  -v $PWD/hub/usage:/app/usage \
+  ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest
+```
+
+对上三个值，本站就能用了：
+
+| 上游 | 本站 |
+|---|---|
+| `API_KEY` | `WB2_UPSTREAM_KEY` |
+| `PANEL_PASSWORD` | `WB2_HUB_PANEL_PASS` |
+| 容器 `8788` 端口 | `WB2_UPSTREAM`（同机 `http://127.0.0.1:8788`，跨容器用容器名或宿主 IP） |
+
+再让本站能看到账号目录：`WB2_HUB_DIR` 指向挂载出来的 `hub/`（里面有 `accounts/` 和 `usage/`）。
+
 ## 鉴权
 
 ```
