@@ -69,6 +69,33 @@ journalctl -u wb2api -f
 4. 配支付：`WB2_PAY_*`；不配则用户在「定价」页只能选手动转账，管理台确认到账
 5. 改档位价格：管理台 → 档位，实时生效，不用重启
 
+## 把账号池面板藏起来（建议）
+
+`docker compose` 默认把 hub 的面板暴露在 `0.0.0.0:8788`，方便你加号，但等于把「账号池后台」挂在公网，只有一层面板密码。
+
+收紧两步：
+
+1. `docker-compose.yml` 里把端口改成只绑本机：
+
+   ```yaml
+   ports:
+     - "127.0.0.1:8788:8788"
+   ```
+
+2. 用 `deploy/nginx-hub.conf` 反代出来，按需开 IP 白名单和 Basic Auth：
+
+   ```bash
+   apt install -y apache2-utils
+   htpasswd -c /etc/nginx/wb-hub.htpasswd admin
+   cp deploy/nginx-hub.conf /etc/nginx/conf.d/wb-hub.conf
+   # 改 server_name / 证书路径 / allow 的 IP，然后
+   nginx -t && systemctl reload nginx
+   ```
+
+   白名单里别忘 `allow` 你自己的出口 IP；套了 Cloudflare 要先配 `real_ip_header`，不然白名单等于全放行。
+
+只做第 1 步也行：加号时用 `ssh -L 8788:127.0.0.1:8788 root@服务器`，本地开 `http://127.0.0.1:8788/`。
+
 ## 升级
 
 ```bash
