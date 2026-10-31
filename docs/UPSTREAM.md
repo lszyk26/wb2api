@@ -14,21 +14,35 @@
 docker run -d --name wb-hub --restart unless-stopped \
   -p 8788:8788 \
   -e API_KEY=换成你的上游密钥 \
-  -e PANEL_PASSWORD=换成你的面板密码 \
+  -e TZ=Asia/Shanghai \
   -v $PWD/hub/accounts:/app/accounts \
   -v $PWD/hub/usage:/app/usage \
-  ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest
+  ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest \
+  python wb_proxy.py --host 0.0.0.0 --lan --panel-password 换成你的面板密码
 ```
+
+几个实测要点（照抄容易踩空的地方）：
+
+- `--host 0.0.0.0` 必须有，镜像默认的启动参数里带了，但一旦你覆盖 `command` 就要自己写全
+- **面板密码不是环境变量**，只能是 `--panel-password`（或起来后在面板里改）；默认 `admin`
+- 面板地址是**根路径 `/`**，`/panel/*` 是接口（`/panel/login` 等），直接访问 `/panel` 是 404
+- 密码哈希存在 `accounts/settings.json`，所以 `accounts/` 目录必须持久化
 
 对上三个值，本站就能用了：
 
 | 上游 | 本站 |
 |---|---|
-| `API_KEY` | `WB2_UPSTREAM_KEY` |
-| `PANEL_PASSWORD` | `WB2_HUB_PANEL_PASS` |
-| 容器 `8788` 端口 | `WB2_UPSTREAM`（同机 `http://127.0.0.1:8788`，跨容器用容器名或宿主 IP） |
+| `API_KEY`（环境变量） | `WB2_UPSTREAM_KEY` |
+| `--panel-password` 的值 | `WB2_HUB_PANEL_PASS` |
+| 容器 `8788` 端口 | `WB2_UPSTREAM`（同机 `http://127.0.0.1:8788`，compose 内 `http://hub:8788`） |
 
 再让本站能看到账号目录：`WB2_HUB_DIR` 指向挂载出来的 `hub/`（里面有 `accounts/` 和 `usage/`）。
+
+### 官方镜像能用吗
+
+能。用 `:latest` 实测（无任何补丁）这些接口都在、行为一致：
+
+`/panel/login` 返回 token、`/accounts/login/start` 返回 `{state, authUrl}`（本站读的就是 `authUrl`）、`/accounts/test` 与 `/accounts/set`、`/accounts/delete`、`/v1/models` 带 `Bearer` 才放行。
 
 ## 鉴权
 

@@ -14,7 +14,7 @@ Go 单二进制 + Vue 3 前端 + SQLite，自带注册登录、密钥管理、�
 
 ```bash
 git clone https://github.com/lszyk26/wb2api.git && cd wb2api
-bash deploy/install.sh          # 自动生成密钥、写 .env、docker compose 起站
+bash deploy/install.sh          # 生成密钥 → 写 .env → 起 hub + 本站
 ```
 
 装完访问 `http://服务器IP:8078`，管理员账号 `admin`，密码在 `.env` 的 `WB2_ADMIN_PASS`（脚本随机生成并打印）。
@@ -73,38 +73,28 @@ docker compose up -d --build
 1. **上游账号池网关 `wb-proxy-hub`** —— 参考实现是 [ardeyouxipianyi/workbuddy2api-hub](https://github.com/ardeyouxipianyi/workbuddy2api-hub)（Python，镜像 `ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest`）。本站只做门面，**没有它：加不了账号，`/v1` 全部 502**（页面、注册、管理台仍然正常）。
 2. **账号**：WorkBuddy（国际版）或 CodeBuddy（国内版），你自己合法持有，并且**必须经 hub 加进池子**（见 [docs/UPSTREAM.md](docs/UPSTREAM.md#先把上游跑起来)）。
 
-**最短可用路径**，三件事缺一不可：
+**最短可用路径**：`bash deploy/install.sh` 会把 hub 一起拉起来，你只剩一步——加号。
+
+1. 打开 `http://服务器IP:8788/`（账号池面板），密码是 `.env` 里的 `WB2_HUB_PANEL_PASS`
+2. 登录 → `Login new account` → 选国际版 / 国内版 → 在浏览器里完成授权
+3. 回本站「账号」页就能看到这个号；在此之前 `/v1` 返回 502 是正常的
+
+不想用一键脚本、手动起 hub：
 
 ```bash
-# 1. 起 hub（账号池本体）
-docker run -d --name wb-hub -p 8788:8788 \
-  -e API_KEY=你的上游密钥 -e PANEL_PASSWORD=你的面板密码 \
+docker run -d --name wb-hub --restart unless-stopped -p 8788:8788 \
+  -e API_KEY=你的上游密钥 -e TZ=Asia/Shanghai \
   -v $PWD/hub/accounts:/app/accounts -v $PWD/hub/usage:/app/usage \
-  ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest
-
-# 2. 打开 http://你的服务器:8788/panel 登录面板，加一个 WorkBuddy / CodeBuddy 账号
-#    （也可以用本站的「OAuth 一键授权」，前提是第 3 步已经配好）
-
-# 3. 本站 .env 填四个值，然后 docker compose up -d
-#    WB2_UPSTREAM=http://127.0.0.1:8788
-#    WB2_UPSTREAM_KEY=<hub 的 API_KEY>
-#    WB2_HUB_PANEL_PASS=<hub 的 PANEL_PASSWORD>
-#    WB2_HUB_DIR=<挂载出来的 hub/ 目录>
+  ghcr.io/ardeyouxipianyi/workbuddy2api-hub:latest \
+  python wb_proxy.py --host 0.0.0.0 --lan --panel-password 你的面板密码
 ```
 
-**可选，不配也能正常部署**
+两点容易踩空：
 
-| 不配什么 | 后果 |
-|---|---|
-| `WB2_RESEND_KEY` / SMTP | 自动关闭邮箱验证码，注册直接放行 |
-| `WB2_PAY_*` | 只能走「手动转账 + 管理台确认」 |
-| `WB2_GH_ID` / `WB2_GH_SECRET` | 隐藏 GitHub 登录入口 |
-| `WB2_HUB_PANEL_PASS` | 关闭 OAuth 一键授权，只能粘贴凭据 JSON |
-| 代理池（mihomo 等） | 只影响上游出口 IP，不影响本站功能 |
+- `--host 0.0.0.0` 不能省，否则容器外连不上（connection reset）
+- **面板密码只能走 `--panel-password` 参数，没有这个环境变量**；默认 `admin`，不改等于裸奔
 
-**不需要**：nginx（Go 自己托管前端）、Redis、MySQL、外部字体、任何 CDN。
-
-时区：日额度按**本地时区 0 点**重置。容器默认 `TZ=Asia/Shanghai`，改 `TZ` 即可。
+然后本站填 `WB2_UPSTREAM`（同机 `http://127.0.0.1:8788`，compose 内用 `http://hub:8788`）、`WB2_UPSTREAM_KEY=<同一个 API_KEY>`、`WB2_HUB_PANEL_PASS=<面板密码>`、`WB2_HUB_DIR=<挂载出来的 hub/>`。
 
 ---
 

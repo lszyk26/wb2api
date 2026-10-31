@@ -61,10 +61,10 @@ journalctl -u wb2api -f
 ## 首次启动后
 
 1. 用 `admin` + `.env` 里的 `WB2_ADMIN_PASS` 登录，进「管理台」
-2. **起上游 + 加账号**（这步不做，账号页是空的、`/v1` 全 502）
-   - 按 [UPSTREAM.md](UPSTREAM.md#先把上游跑起来) 起 `wb-proxy-hub` 容器
-   - 在 hub 面板 `/panel` 里加一个账号，或在本站用「OAuth 一键授权」（需要先配 `WB2_HUB_PANEL_PASS`）
-   - 本站填 `WB2_UPSTREAM` / `WB2_UPSTREAM_KEY` / `WB2_HUB_PANEL_PASS` / `WB2_HUB_DIR`
+2. **加账号**（这步不做，账号页是空的、`/v1` 全 502）
+   - `docker compose` 已经把 hub 一起起好了：打开 `http://服务器IP:8788/`，密码是 `.env` 里的 `WB2_HUB_PANEL_PASS`
+   - 面板里 `Login new account` 授权一个 WorkBuddy / CodeBuddy 账号，或在本站账号页点「OAuth 一键授权」
+   - 手动起 hub（不用 compose）见 [UPSTREAM.md](UPSTREAM.md#先把上游跑起来)
 3. 配发信：`WB2_RESEND_KEY` 或 `WB2_SMTP_*`；都不配则自动关闭邮箱验证码
 4. 配支付：`WB2_PAY_*`；不配则用户在「定价」页只能选手动转账，管理台确认到账
 5. 改档位价格：管理台 → 档位，实时生效，不用重启

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 一键部署：装 Docker → 生成 .env（随机密钥）→ 构建 → 起站 → 打印账号
+# 一键部署：装 Docker → 生成 .env（随机密钥）→ 起 hub + 本站 → 打印账号
 # 用法：bash deploy/install.sh
 set -euo pipefail
 
@@ -46,49 +46,68 @@ if [ -f .env ]; then
 else
   PUBLIC_URL="http://$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || echo 127.0.0.1):8078"
   ADMIN_PASS="$(randpass)"
+  UP_KEY="sk-hub-$(rnd)"
+  HUB_PASS="$(randpass)"
   cp .env.example .env
   sed -i "s|^WB2_PUBLIC_URL=.*|WB2_PUBLIC_URL=${PUBLIC_URL}|" .env
   sed -i "s|^WB2_ADMIN_PASS=.*|WB2_ADMIN_PASS=${ADMIN_PASS}|" .env
   sed -i "s|^WB2_JWT_SECRET=.*|WB2_JWT_SECRET=$(rnd)|" .env
   sed -i "s|^WB2_ENC_KEY=.*|WB2_ENC_KEY=$(rnd)|" .env
+  # 本站与 hub 共用同一个上游密钥
+  sed -i "s|^WB2_UPSTREAM_KEY=.*|WB2_UPSTREAM_KEY=${UP_KEY}|" .env
+  sed -i "s|^# WB2_HUB_PANEL_PASS=.*|WB2_HUB_PANEL_PASS=${HUB_PASS}|" .env
   chmod 600 .env
   say "✓ 已生成 .env（访问地址 ${PUBLIC_URL}）"
 fi
 
-mkdir -p data hub
+mkdir -p data hub/accounts hub/usage
 
-# ---------- 3. 起站 ----------
-say "→ 构建并启动（首次编译 2~5 分钟）"
+# ---------- 3. 起站（hub + 本站）----------
+say "→ 构建并启动（本站首次编译 2~5 分钟，hub 直接拉镜像）"
 $DC up -d --build
 
 # ---------- 4. 等健康检查 ----------
 say "→ 等待服务就绪"
 for i in $(seq 1 60); do
-  if curl -fsS --max-time 2 http://127.0.0.1:8078/api/health >/dev/null 2>&1; then
-    READY=1; break
-  fi
+  curl -fsS --max-time 2 http://127.0.0.1:8078/api/health >/dev/null 2>&1 && { READY=1; break; }
   sleep 3
 done
-[ "${READY:-0}" = "1" ] || die "60 秒内没起来，看日志：$DC logs -f wb2"
+[ "${READY:-0}" = "1" ] || die "60 秒内本站没起来，看日志：$DC logs -f wb2"
+
+HUB_READY=0
+for i in $(seq 1 20); do
+  curl -fsS --max-time 2 http://127.0.0.1:8788/ >/dev/null 2>&1 && { HUB_READY=1; break; }
+  sleep 3
+done
+[ "${HUB_READY:-0}" = "1" ] || say "⚠ hub 还没就绪，稍等片刻或看日志：$DC logs -f hub"
 
 ADMIN_PASS_SHOW="$(grep '^WB2_ADMIN_PASS=' .env | cut -d= -f2-)"
 PUBLIC_SHOW="$(grep '^WB2_PUBLIC_URL=' .env | cut -d= -f2-)"
+HUB_PASS_SHOW="$(grep '^WB2_HUB_PANEL_PASS=' .env | cut -d= -f2-)"
+IP_PORT="${PUBLIC_SHOW%:8078}"
 cat <<EOF
 
 ────────────────────────────────────────────
- ✓ 起来了
+ ✓ 起来了（本站 + 账号池 hub 都已启动）
 
- 站点      ${PUBLIC_SHOW}
- 管理台    登录后侧边栏「管理台」
- 管理员    admin
- 密码      ${ADMIN_PASS_SHOW}
+ 站点        ${PUBLIC_SHOW}
+ 管理台      登录后侧边栏「管理台」
+ 管理员      admin
+ 密码        ${ADMIN_PASS_SHOW}
 
- 下一步（不做也没有功能问题，只是接口会 502）：
-   1. 编辑 .env 填 WB2_UPSTREAM / WB2_UPSTREAM_KEY（账号池网关）
-   2. 需要邮箱验证码就填 WB2_RESEND_KEY，不需要就跳过（自动放行）
-   3. 需要支付就填 WB2_PAY_*，不填则走「手动转账 + 管理台确认」
-   改完重启：$DC up -d
+ 账号池面板  ${IP_PORT}:8788/
+ 面板密码    ${HUB_PASS_SHOW}
 
- 日志：$DC logs -f wb2
+ 下一步：打开上面的「账号池面板」→ 登录 → Login new account
+        加一个 WorkBuddy（国际版）或 CodeBuddy（国内版）账号
+        （也可以回本站「账号」页点「OAuth 一键授权」）
+        没加账号前，对话接口会返回 502，别慌，这是正常的。
+
+ 可选配置（改 .env 后 $DC up -d 生效）：
+   WB2_RESEND_KEY     不填 → 关闭邮箱验证码
+   WB2_PAY_*          不填 → 只能手动转账 + 管理台确认
+   WB2_GH_ID/SECRET   不填 → 隐藏 GitHub 登录
+
+ 日志：$DC logs -f wb2    /    $DC logs -f hub
 ────────────────────────────────────────────
 EOF
