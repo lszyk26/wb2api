@@ -259,6 +259,15 @@ func TestClawback(t *testing.T) {
 	db.Save(admin)
 
 	u := newUser(t, "cb1", 10000, 500)
+	// 让奖池确定：paid 池里有一个权重 4000/10000 的「0点」，抽到它时 clawback 会以
+	// 「这条流水没有可扣回的奖励」拒绝，测试就随 RNG 红绿不定（CI 上真红过一次）。
+	db.Where("pool = ?", "paid").Delete(&LotteryPrize{})
+	if err := db.Create(&LotteryPrize{
+		Pool: "paid", Name: "测试奖", Kind: "lottery_points", Value: 100,
+		Weight: 10000, DailyStock: -1, Enabled: true,
+	}).Error; err != nil {
+		t.Fatalf("重置奖池: %v", err)
+	}
 	code, out := draw(t, u, "paid", "cb-1")
 	if code != 200 {
 		t.Fatalf("抽奖失败 %d %v", code, out)
