@@ -1,5 +1,7 @@
 # WorkBuddy 2.0 · Student API
 
+[![CI](https://github.com/lszyk26/wb2api/actions/workflows/ci.yml/badge.svg)](https://github.com/lszyk26/wb2api/actions/workflows/ci.yml)
+
 Turn a pool of WorkBuddy / CodeBuddy accounts into **one OpenAI-compatible endpoint**.
 
 Single Go binary + Vue 3 frontend + SQLite. Ships with signup/login, API keys, usage metering, plans & top-ups, referral rewards, online payments, and account-pool health/routing. The Go binary serves the built frontend itself, so one process is a whole site.

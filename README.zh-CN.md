@@ -1,5 +1,7 @@
 # WorkBuddy 2.0 · 学生 API
 
+[![CI](https://github.com/lszyk26/wb2api/actions/workflows/ci.yml/badge.svg)](https://github.com/lszyk26/wb2api/actions/workflows/ci.yml)
+
 [English](README.md) | **简体中文**
 
 把一组 WorkBuddy / CodeBuddy 账号，变成**一个 OpenAI 兼容接口**。
