@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 安全问题（不要开公开 issue）/ Security
+    url: https://github.com/lszyk26/wb2api/security/advisories/new
+    about: 涉及鉴权、密钥、计费绕过的漏洞请走私密通道，不要公开披露

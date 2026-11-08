@@ -1,0 +1,49 @@
+name: Bug 报告 / Bug report
+description: 功能不正常、报错、结果与预期不符（Please describe what went wrong）
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请尽量把下面的信息填全，缺上下文的问题往往要多问好几轮。
+        ⚠️ 不要贴 API Key、Token、密码、服务器 IP 等敏感信息（见 SECURITY.md）。
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / 部署方式
+      description: 镜像 tag、commit sha，或"自己编译"；以及是 Docker 还是单二进制
+      placeholder: e.g. v1.0.0 / 59354e9，单二进制 + systemd
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从哪一步开始出现的，越具体越好
+      placeholder: |
+        1. 用 sk-wb-xxx 调用 /v1/chat/completions
+        2. 开启 stream=true
+        3. ……
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果 vs 实际结果
+      placeholder: |
+        期望：……
+        实际：……
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 响应
+      description: 相关报错、上游返回、journalctl 片段（记得脱敏）
+      render: shell
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      placeholder: e.g. Ubuntu 24.04 / Go 1.22 / Chrome 移动端
