@@ -809,6 +809,13 @@ func proxyStream(w http.ResponseWriter, resp *http.Response, u *User, key *APIKe
 			s := strings.TrimSpace(string(line))
 			if strings.HasPrefix(s, "data:") && !strings.Contains(s, "[DONE]") {
 				js := strings.TrimSpace(strings.TrimPrefix(s, "data:"))
+				// 累计正文，供「上游没回 usage」时兜底估算。
+				// 之前这里只把行写给客户端、从没往 buf 写，estimateTokens 永远拿到空串并返回 (1,1)，
+				// 于是这类请求扣费≈0。上限 1MB 防止超长流吃内存。
+				if buf.Len() < 1<<20 {
+					buf.WriteString(js)
+					buf.WriteByte('\n')
+				}
 				if strings.Contains(js, "\"usage\"") && !strings.Contains(js, "\"usage\": null") {
 					var chunk struct {
 						Usage struct {
@@ -883,7 +890,7 @@ func logRow(u *User, key *APIKey, model string, pt, ct int, pts float64, status 
 		IP: clientIP(r), CreatedAt: time.Now(),
 	})
 	db.Model(&APIKey{}).Where("id = ?", key.ID).Updates(map[string]interface{}{
-		"calls":     key.Calls + 1,
+		"calls":     gorm.Expr("calls + 1"),
 		"last_used": time.Now(),
 	})
 }
