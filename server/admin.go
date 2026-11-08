@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 var _ = strconv.Itoa
@@ -370,21 +372,29 @@ func markOrderPaid(o *Order, note string) {
 	if note != "" {
 		updates["note"] = note
 	}
-	db.Model(&Order{}).Where("id = ?", o.ID).Updates(updates)
+	// 原子认领：只有「非 paid → paid」的那一次才继续发放。
+	// 支付平台会重复回调（同一笔的 GET + POST、超时重试、人工补单），此前这里没有任何闸门，
+	// 重复回调会重复加点数 / 重复延长档位 / 重复发邀请返利。
+	res := db.Model(&Order{}).Where("id = ? AND COALESCE(status,'') <> ?", o.ID, "paid").Updates(updates)
+	if res.Error != nil || res.RowsAffected == 0 {
+		return
+	}
+	o.Status = "paid"
 
 	var u User
 	if err := db.First(&u, o.UserID).Error; err == nil {
 		pl := planOf(o.Plan)
 		if pl.Kind == "points" {
 			// 加油包：加点数 + 30 天有效，不动档位
-			u.BonusPoints += pl.Daily
 			until := now.AddDate(0, 0, 30)
 			if u.BonusUntil != nil && u.BonusUntil.After(until) {
 				until = *u.BonusUntil
 			}
-			db.Model(&User{}).Where("id = ?", u.ID).Updates(map[string]interface{}{
-				"bonus_points": u.BonusPoints, "bonus_until": until,
-			})
+			// 用 SQL 自增，别拿内存快照回写（并发到账会互相覆盖）
+			db.Model(&User{}).Where("id = ?", u.ID).
+				UpdateColumn("bonus_points", gorm.Expr("COALESCE(bonus_points,0) + ?", pl.Daily))
+			db.Model(&User{}).Where("id = ? AND (bonus_until IS NULL OR bonus_until < ?)", u.ID, until).
+				UpdateColumn("bonus_until", until)
 		} else {
 			base := now
 			if u.PlanUntil != nil && u.PlanUntil.After(now) {

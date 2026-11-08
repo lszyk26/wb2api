@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // InviteReward 邀请返利流水
@@ -63,12 +65,20 @@ func payInviteRebate(o *Order) {
 	if pts <= 0 {
 		return
 	}
-	inv.BonusPoints += pts
+	// 同一笔订单只返一次（重复回调 / 重复核销都挡住）
+	var dup int64
+	db.Model(&InviteReward{}).Where("order_no = ?", o.OrderNo).Count(&dup)
+	if dup > 0 {
+		return
+	}
+	// 同上：SQL 自增，避免并发时用内存快照回写
+	db.Model(&User{}).Where("id = ?", inv.ID).
+		UpdateColumn("bonus_points", gorm.Expr("COALESCE(bonus_points,0) + ?", pts))
 	if inv.BonusUntil == nil || inv.BonusUntil.Before(time.Now().AddDate(0, 0, 20)) {
 		until := time.Now().AddDate(0, 0, 30)
-		inv.BonusUntil = &until
+		db.Model(&User{}).Where("id = ? AND (bonus_until IS NULL OR bonus_until < ?)", inv.ID, until).
+			UpdateColumn("bonus_until", until)
 	}
-	db.Save(&inv)
 	db.Create(&InviteReward{
 		InviterID: inv.ID, InviteeID: buyer.ID, Invitee: buyer.Username,
 		OrderNo: o.OrderNo, Plan: o.Plan, Amount: o.Amount, Rate: rate,
