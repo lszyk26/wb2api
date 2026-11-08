@@ -890,7 +890,7 @@ func logRow(u *User, key *APIKey, model string, pt, ct int, pts float64, status 
 		IP: clientIP(r), CreatedAt: time.Now(),
 	})
 	db.Model(&APIKey{}).Where("id = ?", key.ID).Updates(map[string]interface{}{
-		"calls":     key.Calls + 1,
+		"calls":     gorm.Expr("calls + 1"),
 		"last_used": time.Now(),
 	})
 }
